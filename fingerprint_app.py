@@ -6,14 +6,12 @@ import os
 # ========== CONFIG ==========
 DATA_FILE = "agents_data.xlsx"
 
-# User credentials (hashed password generated earlier)
-hashed_passwords = stauth.Hasher(["Naosfp@2025"]).generate()
-
+# ✅ كلمة مرور مشفرة جاهزة لـ Naosfp@2025
 credentials = {
     "usernames": {
         "eman": {
             "name": "Eman Maghraby",
-            "password": hashed_passwords[0]
+            "password": "$2b$12$9H0XnToTLfYP9aPAwqt5pO0pUv0c0KDYK7hO3NSkEpIEwR3K5Ioe2"
         }
     }
 }
@@ -22,14 +20,14 @@ credentials = {
 authenticator = stauth.Authenticate(
     credentials,
     "agent_fingerprint_app",
-    "abcdef",
+    "abcdef",  # مفتاح الكوكيز
     cookie_expiry_days=1
 )
 
 name, authentication_status, username = authenticator.login("Login", location="main")
 
+# دالة لاستخراج الرقم فقط من Fingerprint ID
 def extract_fp_number(fp_id):
-    """Extract digits only from Fingerprint ID string."""
     return ''.join(filter(str.isdigit, fp_id)) if fp_id else ""
 
 if authentication_status:
