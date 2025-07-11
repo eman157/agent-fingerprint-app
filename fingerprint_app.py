@@ -5,7 +5,7 @@ import streamlit_authenticator as stauth
 
 # --- Auth Setup ---
 hashed_passwords = [
-    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'  # hashed for: Naosfp@2025
+    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'  # Naosfp@2025
 ]
 
 credentials = {
@@ -22,7 +22,8 @@ authenticator = stauth.Authenticate(
     "agent_fingerprint_app", "abcdef", cookie_expiry_days=1
 )
 
-authenticator.login()
+# 🔐 Login
+authenticator.login("Login", location="main")
 
 if authenticator.authentication_status:
     authenticator.logout("Logout", "sidebar")
@@ -43,6 +44,7 @@ if authenticator.authentication_status:
         if df.empty:
             return "1"
         else:
+            # Get last row (not max value)
             last_fp_id = df.iloc[-1]["Fingerprint ID"]
             return str(int(last_fp_id) + 1)
 
