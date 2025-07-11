@@ -25,10 +25,6 @@ authenticator = stauth.Authenticate(
 # 🔐 Login
 authenticator.login("Login", location="main")
 
-if authenticator.authentication_status:
-    authenticator.logout("Logout", "sidebar")
-    st.sidebar.success(f"Welcome {authenticator.name}!")
-
     DATA_FILE = "agents_data.xlsx"
 
     def load_data():
