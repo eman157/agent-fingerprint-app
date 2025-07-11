@@ -1,107 +1,92 @@
 import streamlit as st
 import pandas as pd
 import os
+import streamlit_authenticator as stauth
 
-DATA_FILE = 'agents_data.xlsx'
+# --- Authenticator Setup ---
+usernames = ['eman', 'admin']
+names = ['Eman Maghraby', 'Admin User']
+passwords = ['1234', 'adminpass']  # plaintext for demo; use hashing in real apps
 
-def init_file():
-    if not os.path.exists(DATA_FILE):
-        df = pd.DataFrame(columns=['Agent Name', 'Agent ID', 'Fingerprint ID'])
+hashed_passwords = stauth.Hasher(passwords).generate()
+
+authenticator = stauth.Authenticate(
+    dict(zip(usernames, [{"name": n, "password": p} for n, p in zip(names, hashed_passwords)])),
+    "agent_fingerprint_app", "abcdef", cookie_expiry_days=1
+)
+
+name, auth_status, username = authenticator.login('Login', 'main')
+
+# --- Main App ---
+if auth_status:
+    authenticator.logout('Logout', 'sidebar')
+    st.sidebar.success(f"Welcome {name}!")
+
+    DATA_FILE = "agents_data.xlsx"
+
+    def load_data():
+        if os.path.exists(DATA_FILE):
+            return pd.read_excel(DATA_FILE, dtype=str)
+        else:
+            return pd.DataFrame(columns=["Name", "Agent ID", "Fingerprint ID"])
+
+    def save_data(df):
         df.to_excel(DATA_FILE, index=False)
 
-def load_data():
-    df = pd.read_excel(DATA_FILE, dtype=str)  # Force all columns to string
-    df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)  # Strip spaces
-    df['Fingerprint ID'] = df['Fingerprint ID'].astype(int)  # convert FP ID back to int
-    return df
+    def get_next_fp_id(df):
+        if df.empty:
+            return "1"
+        else:
+            # Sort by the order of insertion instead of max value
+            last_fp_id = df.iloc[-1]["Fingerprint ID"]
+            return str(int(last_fp_id) + 1)
 
-def save_data(df):
-    df.to_excel(DATA_FILE, index=False)
+    def add_agent(name, agent_id):
+        df = load_data()
+        if agent_id in df["Agent ID"].values:
+            agent_row = df[df["Agent ID"] == agent_id].iloc[0]
+            return f"Agent already exists:\n\nName: {agent_row['Name']}\nID: {agent_row['Agent ID']}\nFingerprint: {agent_row['Fingerprint ID']}"
+        else:
+            fp_id = get_next_fp_id(df)
+            new_row = pd.DataFrame([[name, agent_id, fp_id]], columns=df.columns)
+            df = pd.concat([df, new_row], ignore_index=True)
+            save_data(df)
+            return f"Agent added successfully!\n\nName: {name}\nID: {agent_id}\nFingerprint: {fp_id}"
 
-def get_next_fingerprint_id(df):
-    # Remove empty rows
-    valid_rows = df.dropna(subset=['Agent Name', 'Agent ID', 'Fingerprint ID'])
-    if valid_rows.empty:
-        return 1
-    else:
-        last_fp = valid_rows.iloc[-1]['Fingerprint ID']
-        return int(last_fp) + 1
+    def search_agent(agent_id):
+        df = load_data()
+        if agent_id in df["Agent ID"].values:
+            agent_row = df[df["Agent ID"] == agent_id].iloc[0]
+            return f"Name: {agent_row['Name']}\nID: {agent_row['Agent ID']}\nFingerprint: {agent_row['Fingerprint ID']}"
+        else:
+            return "Agent not found."
 
+    # Tabs
+    tab = st.sidebar.radio("Select action", ["Add Agent", "Search Agent"])
 
-def add_agent(name, agent_id):
-    df = load_data()
-    agent_id = agent_id.strip()
-    name = name.strip()
-
-    # Check if ID exists (after converting all to string)
-    existing = df[df['Agent ID'] == agent_id]
-    if not existing.empty:
-        existing_row = existing.iloc[0]
-        return {
-            "status": "exists",
-            "name": existing_row['Agent Name'],
-            "id": existing_row['Agent ID'],
-            "fingerprint": existing_row['Fingerprint ID']
-        }
-
-    next_fp = get_next_fingerprint_id(df)
-    new_row = pd.DataFrame({
-        'Agent Name': [name],
-        'Agent ID': [agent_id],
-        'Fingerprint ID': [next_fp]
-    })
-    df = pd.concat([df, new_row], ignore_index=True)
-    save_data(df)
-
-    return {
-        "status": "added",
-        "name": name,
-        "id": agent_id,
-        "fingerprint": next_fp
-    }
-
-def search_agent_by_id(agent_id):
-    df = load_data()
-    agent_id = agent_id.strip()
-    result = df[df['Agent ID'] == agent_id]
-    return result
-
-def main():
-    st.set_page_config(page_title="Agent Fingerprint Generator", layout="centered")
-    st.title("Agent Fingerprint Code Generator")
-
-    tab1, tab2 = st.tabs(["➕ Add Agent", "🔍 Search Agent"])
-
-    with tab1:
-        st.subheader("Add New Agent")
+    if tab == "Add Agent":
+        st.header("Add New Agent")
         name = st.text_input("Agent Name")
-        agent_id = st.text_input("Agent ID (must be unique)")
-
-        if st.button("Add Agent"):
+        agent_id = st.text_input("Agent ID")
+        if st.button("Add"):
             if name and agent_id:
-                result = add_agent(name, agent_id)
-                if result["status"] == "exists":
-                    st.warning("This Agent ID already exists.")
-                    st.info(f"Name: {result['name']}\nID: {result['id']}\nFingerprint ID: {result['fingerprint']}")
-                else:
-                    st.success(f"{result['name']} was added successfully!")
-                    st.success(f"Generated Fingerprint ID: {result['fingerprint']}")
+                msg = add_agent(name.strip(), agent_id.strip())
+                st.success(msg)
             else:
-                st.error("Please enter both Agent Name and Agent ID.")
+                st.error("Please fill in both fields.")
 
-    with tab2:
-        st.subheader("Search Agent by ID")
+    elif tab == "Search Agent":
+        st.header("Search Agent by ID")
         search_id = st.text_input("Enter Agent ID")
-
         if st.button("Search"):
             if search_id:
-                result = search_agent_by_id(search_id)
-                if not result.empty:
-                    st.success("Agent found:")
-                    st.dataframe(result)
-                else:
-                    st.error("No agent found with this ID.")
+                result = search_agent(search_id.strip())
+                st.info(result)
+            else:
+                st.warning("Please enter an Agent ID.")
 
-if __name__ == "__main__":
-    init_file()
-    main()
+elif auth_status is False:
+    st.error("Username or password is incorrect.")
+
+elif auth_status is None:
+    st.warning("Please enter your username and password.")
