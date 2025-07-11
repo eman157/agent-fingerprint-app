@@ -5,7 +5,7 @@ import streamlit_authenticator as stauth
 
 # --- Auth Setup ---
 hashed_passwords = [
-    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'  # Naosfp@2025
+    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'  # password: Naosfp@2025
 ]
 
 credentials = {
@@ -22,8 +22,12 @@ authenticator = stauth.Authenticate(
     "agent_fingerprint_app", "abcdef", cookie_expiry_days=1
 )
 
-# 🔐 Login
+# 🔐 Login interface
 authenticator.login("Login", location="main")
+
+if authenticator.authentication_status:
+    authenticator.logout("Logout", "sidebar")
+    st.sidebar.success(f"Welcome {authenticator.name}!")
 
     DATA_FILE = "agents_data.xlsx"
 
@@ -40,7 +44,6 @@ authenticator.login("Login", location="main")
         if df.empty:
             return "1"
         else:
-            # Get last row (not max value)
             last_fp_id = df.iloc[-1]["Fingerprint ID"]
             return str(int(last_fp_id) + 1)
 
@@ -64,7 +67,7 @@ authenticator.login("Login", location="main")
         else:
             return "Agent not found."
 
-    # --- UI Tabs ---
+    # --- UI ---
     tab = st.sidebar.radio("Select action", ["Add Agent", "Search Agent"])
 
     if tab == "Add Agent":
@@ -90,6 +93,5 @@ authenticator.login("Login", location="main")
 
 elif authenticator.authentication_status is False:
     st.error("Username or password is incorrect.")
-
 elif authenticator.authentication_status is None:
     st.warning("Please enter your username and password.")
