@@ -22,7 +22,8 @@ authenticator = stauth.Authenticate(
     "agent_fingerprint_app", "abcdef", cookie_expiry_days=1
 )
 
-name, auth_status, username = authenticator.login("Login", "main")
+name, auth_status, username = authenticator.login("Login", location="main")
+
 
 if auth_status:
     authenticator.logout("Logout", "sidebar")
