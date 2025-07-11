@@ -6,9 +6,15 @@ import streamlit_authenticator as stauth
 # --- Authenticator Setup ---
 usernames = ['eman', 'admin']
 names = ['Eman Maghraby', 'Admin User']
-passwords = ['1234', 'adminpass']  # plaintext for demo; use hashing in real apps
+hashed_passwords = [
+    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'
+]
 
-hashed_passwords = stauth.Hasher(passwords).generate()
+authenticator = stauth.Authenticate(
+    {'eman': {'name': 'Eman Maghraby', 'password': hashed_passwords[0]}},
+    "agent_fingerprint_app", "abcdef", cookie_expiry_days=1
+)
+
 
 authenticator = stauth.Authenticate(
     dict(zip(usernames, [{"name": n, "password": p} for n, p in zip(names, hashed_passwords)])),
