@@ -23,11 +23,12 @@ authenticator = stauth.Authenticate(
 )
 
 # 🔐 Login interface
-authenticator.login("Login", location="main")
+name, authentication_status, username = authenticator.login("Login", "main")
 
-if authenticator.authentication_status:
+if authentication_status:
     authenticator.logout("Logout", "sidebar")
-    st.sidebar.success(f"Welcome {authenticator.name}!")
+    st.sidebar.success(f"Welcome {name}!")
+)
 
     DATA_FILE = "agents_data.xlsx"
 
