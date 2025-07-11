@@ -5,7 +5,7 @@ import streamlit_authenticator as stauth
 
 # --- Auth Setup ---
 hashed_passwords = [
-    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'  # Naosfp@2025
+    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'  # hashed for: Naosfp@2025
 ]
 
 credentials = {
@@ -22,12 +22,11 @@ authenticator = stauth.Authenticate(
     "agent_fingerprint_app", "abcdef", cookie_expiry_days=1
 )
 
-name, auth_status, username = authenticator.login("Login", location="main")
+authenticator.login()
 
-
-if auth_status:
+if authenticator.authentication_status:
     authenticator.logout("Logout", "sidebar")
-    st.sidebar.success(f"Welcome {name}!")
+    st.sidebar.success(f"Welcome {authenticator.name}!")
 
     DATA_FILE = "agents_data.xlsx"
 
@@ -91,8 +90,8 @@ if auth_status:
             else:
                 st.warning("Please enter an Agent ID.")
 
-elif auth_status is False:
+elif authenticator.authentication_status is False:
     st.error("Username or password is incorrect.")
 
-elif auth_status is None:
+elif authenticator.authentication_status is None:
     st.warning("Please enter your username and password.")
