@@ -3,29 +3,29 @@ import pandas as pd
 import os
 import streamlit_authenticator as stauth
 
-# --- Authenticator Setup ---
-usernames = ['eman', 'admin']
-names = ['Eman Maghraby', 'Admin User']
+# --- Auth Setup ---
 hashed_passwords = [
-    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'
+    '$2b$12$LyBEFK1UkgnL0/Nj2H4r6euK8DaEoNxi8fVasDeY1crsh9/jkG5jq'  # Naosfp@2025
 ]
 
+credentials = {
+    "usernames": {
+        "eman": {
+            "name": "Eman Maghraby",
+            "password": hashed_passwords[0]
+        }
+    }
+}
+
 authenticator = stauth.Authenticate(
-    {'eman': {'name': 'Eman Maghraby', 'password': hashed_passwords[0]}},
+    credentials,
     "agent_fingerprint_app", "abcdef", cookie_expiry_days=1
 )
 
+name, auth_status, username = authenticator.login("Login", "main")
 
-authenticator = stauth.Authenticate(
-    dict(zip(usernames, [{"name": n, "password": p} for n, p in zip(names, hashed_passwords)])),
-    "agent_fingerprint_app", "abcdef", cookie_expiry_days=1
-)
-
-name, auth_status, username = authenticator.login('Login', 'main')
-
-# --- Main App ---
 if auth_status:
-    authenticator.logout('Logout', 'sidebar')
+    authenticator.logout("Logout", "sidebar")
     st.sidebar.success(f"Welcome {name}!")
 
     DATA_FILE = "agents_data.xlsx"
@@ -43,7 +43,6 @@ if auth_status:
         if df.empty:
             return "1"
         else:
-            # Sort by the order of insertion instead of max value
             last_fp_id = df.iloc[-1]["Fingerprint ID"]
             return str(int(last_fp_id) + 1)
 
@@ -67,7 +66,7 @@ if auth_status:
         else:
             return "Agent not found."
 
-    # Tabs
+    # --- UI Tabs ---
     tab = st.sidebar.radio("Select action", ["Add Agent", "Search Agent"])
 
     if tab == "Add Agent":
