@@ -23,7 +23,7 @@ authenticator = stauth.Authenticate(
 )
 
 # 🔐 Login interface
-name, authentication_status, username = authenticator.login("Login", "main")
+name, authentication_status, username = authenticator.login("Login", location="main")
 
 if authentication_status:
     authenticator.logout("Logout", "sidebar")
