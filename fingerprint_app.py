@@ -1,25 +1,38 @@
 import streamlit as st
 import pandas as pd
-from pathlib import Path
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-DATA_FILE = "agents_data.xlsx"
+# إعداد الاتصال بجوجل شيت
+scope = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
 
-# Ensure file exists
-if not Path(DATA_FILE).exists():
-    df_init = pd.DataFrame(columns=["Name", "Agent ID", "Fingerprint ID"])
-    df_init.to_excel(DATA_FILE, index=False)
+creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
+client = gspread.authorize(creds)
+sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/11xldWqkVi3RKe9WLWzGiLskFX4vpT9VoH4HNn9eqt4s/edit#gid=0")
+worksheet = sheet.get_worksheet(0)
 
+# تحميل البيانات كـ DataFrame
 def load_data():
-    return pd.read_excel(DATA_FILE, dtype=str)
+    data = worksheet.get_all_records()
+    return pd.DataFrame(data)
 
+# حفظ البيانات إلى الشيت
 def save_data(df):
-    df.to_excel(DATA_FILE, index=False)
+    worksheet.clear()
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist())
+
+# توليد Fingerprint ID فريد
 
 def generate_unique_fingerprint_id(existing_ids, last_added_id):
     current = last_added_id + 1
     while str(current) in existing_ids:
         current += 1
     return str(current)
+
+# إضافة وكيل
 
 def add_agent(name, agent_id):
     df = load_data()
@@ -34,7 +47,6 @@ def add_agent(name, agent_id):
         }
 
     used_fingerprint_ids = set(df["Fingerprint ID"].values)
-
     try:
         last_added_id = int(df["Fingerprint ID"].iloc[-1])
     except:
@@ -59,6 +71,7 @@ def add_agent(name, agent_id):
     }
 
 # Streamlit UI
+st.set_page_config(page_title="Agent Fingerprint ID", page_icon="\U0001F9B7")
 st.title("Agent Fingerprint Code Generator")
 
 tab1, tab2 = st.tabs(["➕ Add Agent", "🔍 Search Agent"])
@@ -72,20 +85,16 @@ with tab1:
             result = add_agent(name.strip(), agent_id.strip())
             if result["status"] == "exists":
                 st.warning("Agent already exists:")
-                st.markdown(f"""
-                #### 👤 Agent Info
-                - **Name**: {result['name']}
-                - **Agent ID**: {result['agent_id']}
-                - **Fingerprint ID**: {result['fingerprint_id']}
-                """)
             else:
                 st.success("Agent added successfully!")
-                st.markdown(f"""
-                #### ✅ New Agent Added
-                - **Name**: {result['name']}
-                - **Agent ID**: {result['agent_id']}
-                - **Fingerprint ID**: {result['fingerprint_id']}
-                """)
+            st.markdown(f"""
+                <div style='padding:10px;border:1px solid #ddd;border-radius:10px;background-color:#f9f9f9;'>
+                <b>Status:</b> {result['status']}<br>
+                <b>Name:</b> {result['name']}<br>
+                <b>Agent ID:</b> {result['agent_id']}<br>
+                <b>Fingerprint ID:</b> {result['fingerprint_id']}
+                </div>
+            """, unsafe_allow_html=True)
         else:
             st.error("Please fill in both name and Agent ID.")
 
