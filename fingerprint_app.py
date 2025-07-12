@@ -1,113 +1,90 @@
 import streamlit as st
 import pandas as pd
-import streamlit_authenticator as stauth
 import os
 
 # --- Constants ---
 DATA_FILE = "agents_data.xlsx"
 
-# --- Password Setup ---
-usernames = ['eman']
-names = ['Eman Maghraby']
-passwords = ['Naosfp@2025']
+st.set_page_config(page_title="Agent Fingerprint Generator", layout="centered")
+st.title("🧬 Agent Fingerprint Code Generator")
 
-hashed_passwords = stauth.Hasher(passwords).generate()
+# --- Load & Save ---
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return pd.read_excel(DATA_FILE, dtype=str)
+    else:
+        return pd.DataFrame(columns=["Name", "Agent ID", "Fingerprint ID"])
 
-authenticator = stauth.Authenticate(
-    credentials={'usernames': {
-        usernames[0]: {'name': names[0], 'password': hashed_passwords[0]}
-    }},
-    cookie_name="agent_fingerprint_app",
-    key="abcdef",
-    cookie_expiry_days=1
-)
+def save_data(df):
+    df.to_excel(DATA_FILE, index=False)
 
-name, authentication_status, username = authenticator.login("Login")
+# --- Add Agent Logic ---
+def add_agent(name, agent_id):
+    df = load_data()
 
-if authentication_status:
-    authenticator.logout("Logout", "sidebar")
-    st.sidebar.success(f"Welcome, {name}!")
-
-    # --- Load & Save ---
-    def load_data():
-        if os.path.exists(DATA_FILE):
-            return pd.read_excel(DATA_FILE, dtype=str)
-        else:
-            return pd.DataFrame(columns=["Name", "Agent ID", "Fingerprint ID"])
-
-    def save_data(df):
-        df.to_excel(DATA_FILE, index=False)
-
-    # --- Add Agent Logic ---
-    def add_agent(name, agent_id):
-        df = load_data()
-
-        # Check for duplicates
-        if agent_id in df["Agent ID"].values:
-            existing = df[df["Agent ID"] == agent_id].iloc[0]
-            return {
-                "status": "exists",
-                "name": existing["Name"],
-                "agent_id": existing["Agent ID"],
-                "fingerprint_id": existing["Fingerprint ID"]
-            }
-
-        # Get the last fingerprint ID
-        if df.empty:
-            last_id = 1000
-        else:
-            last_id = df["Fingerprint ID"].astype(int).max()
-
-        new_fp_id = last_id + 1
-        new_row = {"Name": name, "Agent ID": agent_id, "Fingerprint ID": str(new_fp_id)}
-        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-        save_data(df)
+    # Check for duplicates
+    if agent_id in df["Agent ID"].values:
+        existing = df[df["Agent ID"] == agent_id].iloc[0]
         return {
-            "status": "added",
-            "name": name,
-            "agent_id": agent_id,
-            "fingerprint_id": str(new_fp_id)
+            "status": "exists",
+            "name": existing["Name"],
+            "agent_id": existing["Agent ID"],
+            "fingerprint_id": existing["Fingerprint ID"]
         }
 
-    # --- UI Tabs ---
-    tab1, tab2 = st.tabs(["➕ Add Agent", "🔍 Search"])
+    # Get last used Fingerprint ID
+    if df.empty:
+        last_fp_id = 1000
+    else:
+        last_fp_id = df["Fingerprint ID"].astype(int).max()
 
-    with tab1:
-        st.header("Add New Agent")
-        name_input = st.text_input("Agent Name")
-        id_input = st.text_input("Agent ID")
+    new_fp_id = last_fp_id + 1
+    new_row = {"Name": name, "Agent ID": agent_id, "Fingerprint ID": str(new_fp_id)}
+    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    save_data(df)
+    return {
+        "status": "added",
+        "name": name,
+        "agent_id": agent_id,
+        "fingerprint_id": str(new_fp_id)
+    }
 
-        if st.button("Generate Fingerprint Code"):
-            if name_input and id_input:
-                result = add_agent(name_input.strip(), id_input.strip())
+# --- Tabs ---
+tab1, tab2 = st.tabs(["➕ Add Agent", "🔍 Search"])
 
-                if result["status"] == "added":
-                    st.success("✅ Agent added successfully!")
-                    st.write(f"👤 Name: {result['name']}")
-                    st.write(f"🆔 Agent ID: {result['agent_id']}")
-                    st.write(f"🧬 Fingerprint ID: {result['fingerprint_id']}")
-                elif result["status"] == "exists":
-                    st.warning("⚠️ Agent already exists!")
-                    st.write(f"👤 Name: {result['name']}")
-                    st.write(f"🆔 Agent ID: {result['agent_id']}")
-                    st.write(f"🧬 Fingerprint ID: {result['fingerprint_id']}")
-            else:
-                st.error("Please fill in both fields.")
+with tab1:
+    st.header("Add New Agent")
+    name_input = st.text_input("Agent Name")
+    id_input = st.text_input("Agent ID")
 
-    with tab2:
-        st.header("Search by Agent ID")
-        search_id = st.text_input("Enter Agent ID to search")
+    if st.button("Generate Fingerprint Code"):
+        if name_input and id_input:
+            result = add_agent(name_input.strip(), id_input.strip())
 
-        if st.button("Search"):
-            df = load_data()
-            if search_id in df["Agent ID"].values:
-                result = df[df["Agent ID"] == search_id].iloc[0]
-                st.success("✅ Agent Found")
-                st.write(f"👤 Name: {result['Name']}")
-                st.write(f"🆔 Agent ID: {result['Agent ID']}")
-                st.write(f"🧬 Fingerprint ID: {result['Fingerprint ID']}")
-            else:
-                st.error("❌ Agent ID not found.")
+            if result["status"] == "added":
+                st.success("✅ Agent added successfully!")
+                st.write(f"👤 Name: {result['name']}")
+                st.write(f"🆔 Agent ID: {result['agent_id']}")
+                st.write(f"🧬 Fingerprint ID: {result['fingerprint_id']}")
+            elif result["status"] == "exists":
+                st.warning("⚠️ Agent already exists!")
+                st.write(f"👤 Name: {result['name']}")
+                st.write(f"🆔 Agent ID: {result['agent_id']}")
+                st.write(f"🧬 Fingerprint ID: {result['fingerprint_id']}")
+        else:
+            st.error("Please fill in both fields.")
 
-else:
-    st.error("Please enter valid credentials.")
+with tab2:
+    st.header("Search by Agent ID")
+    search_id = st.text_input("Enter Agent ID")
+
+    if st.button("Search"):
+        df = load_data()
+        if search_id in df["Agent ID"].values:
+            result = df[df["Agent ID"] == search_id].iloc[0]
+            st.success("✅ Agent Found")
+            st.write(f"👤 Name: {result['Name']}")
+            st.write(f"🆔 Agent ID: {result['Agent ID']}")
+            st.write(f"🧬 Fingerprint ID: {result['Fingerprint ID']}")
+        else:
+            st.error("❌ Agent ID not found.")
