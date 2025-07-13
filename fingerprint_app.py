@@ -3,7 +3,7 @@ import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# ----------------- Google Sheets Setup -----------------
+# ------------- Google Sheets Setup -------------
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 client = gspread.authorize(creds)
@@ -11,6 +11,7 @@ client = gspread.authorize(creds)
 SHEET_ID = "11xldWqkVi3RKe9WLWzGiLskFX4vpT9VoH4HNn9eqt4s"
 sheet = client.open_by_key(SHEET_ID).sheet1
 
+# ------------- Data Functions -------------
 def load_data():
     data = sheet.get_all_records()
     return pd.DataFrame(data)
@@ -19,8 +20,8 @@ def save_data(df):
     sheet.clear()
     sheet.update([df.columns.values.tolist()] + df.values.tolist())
 
-def generate_unique_fingerprint_id(existing_ids, last_added_id):
-    current = last_added_id + 1
+def generate_unique_fingerprint_id(existing_ids, last_id):
+    current = last_id + 1
     while str(current) in existing_ids:
         current += 1
     return str(current)
@@ -28,8 +29,9 @@ def generate_unique_fingerprint_id(existing_ids, last_added_id):
 def add_agent(name, agent_id):
     df = load_data()
 
+    # Check if agent already exists
     if agent_id in df["Agent ID"].astype(str).values:
-        existing = df[df["Agent ID"] == agent_id].iloc[0]
+        existing = df[df["Agent ID"].astype(str) == str(agent_id)].iloc[0]
         return {
             "status": "exists",
             "name": existing["Name"],
@@ -37,19 +39,20 @@ def add_agent(name, agent_id):
             "fingerprint_id": existing["Fingerprint ID"]
         }
 
-    used_fingerprint_ids = set(df["Fingerprint ID"].astype(str).values)
+    # Get existing fingerprint IDs
+    used_ids = set(df["Fingerprint ID"].astype(str))
 
     try:
-        last_added_id = int(df["Fingerprint ID"].iloc[-1])
+        last_id = int(df["Fingerprint ID"].iloc[-1])
     except:
-        last_added_id = 999
+        last_id = 999
 
-    new_fingerprint_id = generate_unique_fingerprint_id(used_fingerprint_ids, last_added_id)
+    new_fp_id = generate_unique_fingerprint_id(used_ids, last_id)
 
     new_row = {
         "Name": name,
         "Agent ID": agent_id,
-        "Fingerprint ID": new_fingerprint_id
+        "Fingerprint ID": new_fp_id
     }
 
     df.loc[len(df)] = new_row
@@ -59,10 +62,10 @@ def add_agent(name, agent_id):
         "status": "added",
         "name": name,
         "agent_id": agent_id,
-        "fingerprint_id": new_fingerprint_id
+        "fingerprint_id": new_fp_id
     }
 
-# ----------------- Streamlit UI -----------------
+# ------------- Streamlit UI -------------
 st.set_page_config(page_title="Agent Fingerprint Generator", page_icon="🧬")
 st.title("🧬 Agent Fingerprint Code Generator")
 
@@ -89,7 +92,7 @@ with tab2:
     search_id = st.text_input("Search by Agent ID")
     if st.button("Search"):
         df = load_data()
-        result = df[df["Agent ID"] == search_id]
+        result = df[df["Agent ID"].astype(str) == str(search_id)]
         if not result.empty:
             st.success("✅ Agent found:")
             st.dataframe(result)
