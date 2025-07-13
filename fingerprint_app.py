@@ -8,7 +8,6 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
 client = gspread.authorize(creds)
 
-# Google Sheet
 SHEET_ID = "11xldWqkVi3RKe9WLWzGiLskFX4vpT9VoH4HNn9eqt4s"
 sheet = client.open_by_key(SHEET_ID).sheet1
 
@@ -29,8 +28,7 @@ def generate_unique_fingerprint_id(existing_ids, last_added_id):
 def add_agent(name, agent_id):
     df = load_data()
 
-    # Check if the agent already exists
-    if agent_id in df["Agent ID"].values:
+    if agent_id in df["Agent ID"].astype(str).values:
         existing = df[df["Agent ID"] == agent_id].iloc[0]
         return {
             "status": "exists",
@@ -39,7 +37,7 @@ def add_agent(name, agent_id):
             "fingerprint_id": existing["Fingerprint ID"]
         }
 
-    used_fingerprint_ids = set(df["Fingerprint ID"].values)
+    used_fingerprint_ids = set(df["Fingerprint ID"].astype(str).values)
 
     try:
         last_added_id = int(df["Fingerprint ID"].iloc[-1])
@@ -79,10 +77,11 @@ with tab1:
             result = add_agent(name.strip(), agent_id.strip())
             if result["status"] == "exists":
                 st.warning("⚠️ Agent already exists:")
-                st.table(pd.DataFrame([result]))
             else:
                 st.success("✅ Agent added successfully!")
-                st.table(pd.DataFrame([result]))
+
+            st.markdown("### Result")
+            st.table(pd.DataFrame([result]))
         else:
             st.error("❌ Please fill in both name and Agent ID.")
 
