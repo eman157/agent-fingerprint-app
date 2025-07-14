@@ -66,8 +66,8 @@ def add_agent(name, agent_id):
     }
 
 # ------------- Streamlit UI -------------
-st.set_page_config(page_title="Agent Fingerprint Generator", page_icon="🧬")
-st.title("🧬 Agent Fingerprint Code Generator")
+st.set_page_config(page_title="Agent Fingerprint Generator", page_icon="✍️")
+st.title("✍️ Agent Fingerprint Code Generator")
 
 tab1, tab2 = st.tabs(["➕ Add Agent", "🔍 Search Agent"])
 
